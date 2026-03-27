@@ -19,7 +19,9 @@ import {
   increment,
   addDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/db";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/db";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const [quests, setQuests] = useState<any[]>([]);
@@ -27,7 +29,7 @@ export default function Dashboard() {
   const [weeklyExp, setWeeklyExp] = useState(0);
 
   // Fitur Admin & Modal
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false); // <--- Sekarang default-nya false (Member biasa)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newQuest, setNewQuest] = useState({
     title: "",
@@ -35,6 +37,31 @@ export default function Dashboard() {
     exp: 30,
     target: "Semua Tim",
   });
+
+  const router = useRouter();
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // Kalau belum login, lempar ke halaman login
+        router.push("/login");
+      } else {
+        // Kalau sudah login, cek apakah emailnya adalah email Admin kamu?
+        // PENTING: Ganti "admin@pingpong.com" dengan email yang kamu buat di Firebase!
+        if (user.email === "admin@pingpong.com") {
+          setIsAdmin(true); // Pintu Admin terbuka! Tombol +Buat Misi akan muncul.
+        } else {
+          setIsAdmin(false); // Mode Member biasa.
+        }
+
+        // Matikan animasi loading
+        setIsAuthChecking(false);
+      }
+    });
+
+    return () => unsubAuth();
+  }, [router]);
 
   // 1. EFEK REAL-TIME (CCTV FIREBASE)
   useEffect(() => {
@@ -159,13 +186,6 @@ export default function Dashboard() {
               </div>
 
               <div className="text-right flex items-center gap-4">
-                <button
-                  onClick={() => setIsAdmin(!isAdmin)}
-                  className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition-colors ${isAdmin ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "bg-slate-700 text-slate-400 border-slate-600"}`}
-                >
-                  View as: {isAdmin ? "Admin" : "Member"}
-                </button>
-
                 {isAdmin && (
                   <button
                     onClick={() => setIsModalOpen(true)}

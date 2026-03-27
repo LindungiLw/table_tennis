@@ -1,21 +1,18 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-// import { getAuth } from "firebase/auth"; // Ini kita matikan dulu sementara karena belum dipakai
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCAnTMcKKVbCb15oHtabaWvYLSnWondMyQ",
-  authDomain: "pingpong-club-8e63d.firebaseapp.com",
-  projectId: "pingpong-club-8e63d",
-  storageBucket: "pingpong-club-8e63d.firebasestorage.app",
-  messagingSenderId: "935513074113",
-  appId: "1:935513074113:web:bd9951c0e0c64a78322740",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Mencegah error inisialisasi ganda di Next.js
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Export db agar bisa dipanggil dari app/page.tsx
 export const db = getFirestore(app);
 export const auth = getAuth(app);

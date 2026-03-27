@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/db";
+import { doc, getDoc, setDoc } from "firebase/firestore"; // <-- Tambahan import Firestore
+import { auth, db } from "@/lib/db"; // <-- Tambahan import db
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Activity } from "lucide-react";
+import { Activity, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -20,31 +20,57 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Perintah asli ke Firebase untuk mengecek email & password
-      await signInWithEmailAndPassword(auth, email, password);
+      // --- LOGIKA PINTAR AUTO-EMAIL ---
+      let finalEmail = loginId.trim();
 
-      // Jika berhasil, tendang user ke halaman Dashboard utama
+      if (!finalEmail.includes("@")) {
+        finalEmail = `${finalEmail.replace(/\s+/g, "")}@gmail.com`;
+      }
+
+      // 1. Proses Login ke Firebase Auth
+      await signInWithEmailAndPassword(auth, finalEmail, password);
+
+      // 2. --- LOGIKA BARU: AUTO-CREATE DATABASE PROFIL ---
+      // Ambil nama depan (Misal: natanael -> Natanael)
+      const extractedName = finalEmail.split("@")[0];
+      const formattedName =
+        extractedName.charAt(0).toUpperCase() + extractedName.slice(1);
+
+      // Cek apakah data user ini sudah ada di Firestore Database
+      const userRef = doc(db, "users", formattedName);
+      const userSnap = await getDoc(userRef);
+
+      // Kalau belum ada, buatkan profilnya secara otomatis!
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          exp: 0,
+          teamId: null, // Otomatis jadi Free Agent
+          role:
+            finalEmail === "rahmalindungilaowo380@gmail.com"
+              ? "admin"
+              : "member",
+        });
+      }
+
+      // 3. Jika berhasil, lempar ke halaman Polisi Lalu Lintas (Root)
       router.push("/");
     } catch (err: any) {
-      // Jika gagal (password salah/email tidak ada)
-      setError("Email atau password salah. Silakan coba lagi.");
+      console.error(err);
+      setError("Username/Email atau password salah. Coba lagi ya!");
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 w-full absolute inset-0 z-50">
-      {/* Background Ornamen */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -right-[10%] w-[70%] h-[70%] rounded-full bg-orange-600/5 blur-[120px]" />
-        <div className="absolute -bottom-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-600/5 blur-[120px]" />
-      </div>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Efek Latar Belakang */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-600/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo Club */}
+        {/* Logo / Header */}
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-gradient-to-tr from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/20 transform rotate-12">
-            <Activity className="w-8 h-8 text-white -rotate-12" />
+          <div className="w-16 h-16 bg-gradient-to-tr from-orange-500 to-orange-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-orange-500/20">
+            <Activity className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-widest flex items-center justify-center gap-2">
             PING<span className="text-orange-500 font-black">PONG</span>
@@ -54,40 +80,42 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Form Login */}
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Pesan Error */}
-            {error && (
-              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-sm font-medium text-center">
-                {error}
-              </div>
-            )}
+        {/* Form Card */}
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
+          <h2 className="text-xl font-bold text-white mb-6">Masuk ke Arena</h2>
 
+          {error && (
+            <div className="mb-6 bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 text-sm font-medium">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-400 mb-2">
-                Email Address
+              <label className="text-slate-500 text-xs font-bold uppercase ml-1">
+                Username / Email
               </label>
-              <div className="relative">
+              <div className="relative mt-2">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-500" />
+                  <User className="h-5 w-5 text-slate-500" />
                 </div>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3.5 bg-slate-950/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
-                  placeholder="admin@pingpong.com"
+                  type="text"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl pl-11 pr-5 py-4 text-white focus:outline-none focus:border-orange-500 transition-all placeholder:text-slate-600"
+                  placeholder="Username"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-400 mb-2">
-                Password / Passcode
+              <label className="text-slate-500 text-xs font-bold uppercase ml-1">
+                Password
               </label>
-              <div className="relative">
+              <div className="relative mt-2">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-slate-500" />
                 </div>
@@ -95,7 +123,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3.5 bg-slate-950/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
+                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl pl-11 pr-5 py-4 text-white focus:outline-none focus:border-orange-500 transition-all placeholder:text-slate-600"
                   placeholder="••••••••"
                   required
                 />
@@ -105,12 +133,22 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center disabled:opacity-70"
+              className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 py-4 mt-8 rounded-2xl font-black text-white transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center gap-2"
             >
-              {isLoading ? "Authenticating..." : "Masuk ke Portal"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Sedang Masuk...
+                </>
+              ) : (
+                "LOGIN SEKARANG"
+              )}
             </button>
           </form>
         </div>
+
+        <p className="text-center text-slate-500 text-xs mt-8">
+          Hanya untuk anggota internal Pingpong Club JIU.
+        </p>
       </div>
     </div>
   );

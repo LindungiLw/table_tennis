@@ -1,25 +1,42 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar"; // Mengimpor Sidebar kita
+import Sidebar from "@/components/Sidebar";
+
+// Menggunakan font Inter bawaan Next.js agar rapi
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PingPong Club Dashboard",
-  description: "Sistem Manajemen dan EXP Tim Tenis Meja",
+  title: "PINGPONG | Club JIU",
+  description: "Portal Manajemen Tim Tenis Meja JIU",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="id">
-      <body className="flex h-screen overflow-hidden antialiased">
-        {/* Sidebar akan selalu diam di kiri */}
+      {/* flex & h-screen: Membuat layout memenuhi layar dan bersebelahan (kiri-kanan)
+        overflow-hidden: Mencegah layar utama bergeser/scroll secara keseluruhan
+      */}
+      <body
+        className={`${inter.className} bg-slate-950 text-white antialiased flex h-screen overflow-hidden`}
+      >
+        {/* Sidebar dipanggil di sini. 
+          Tenang saja, dia otomatis hilang di halaman Login karena logika di dalamnya.
+        */}
         <Sidebar />
 
-        {/* Area Konten Utama di sebelah kanan */}
-        <main className="flex-1 overflow-y-auto bg-slate-900">{children}</main>
+        {/* Area Konten Utama (Dashboard Admin/Member akan muncul di dalam sini)
+          flex-1: Mengambil sisa ruang di sebelah kanan Sidebar
+          overflow-y-auto: Membiarkan konten di sebelah kanan bisa di-scroll ke bawah
+          pt-20 md:pt-0: (BARU) Memberi jarak atas di HP agar tidak tertabrak tombol menu
+        */}
+        <main className="flex-1 h-full overflow-y-auto relative pt-20 md:pt-0">
+          {children}
+        </main>
       </body>
     </html>
   );

@@ -13,8 +13,6 @@ import {
   LogOut,
   ShieldAlert,
   Swords,
-  Menu, // <-- Tambahan icon untuk HP
-  X, // <-- Tambahan icon tutup untuk HP
 } from "lucide-react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/db";
@@ -29,9 +27,6 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState("...");
   const [userInitial, setUserInitial] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-
-  // --- STATE BARU: Untuk buka/tutup menu di layar HP ---
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -54,69 +49,105 @@ export default function Sidebar() {
     return () => unsub();
   }, []);
 
-  // --- Tutup sidebar otomatis setiap kali pindah halaman di HP ---
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
-
   if (pathname === "/login" || pathname === "/") return null;
 
   const adminLinks = [
-    { icon: ShieldAlert, label: "Admin Panel", href: "/admin", badge: null },
-    {
-      icon: Target,
-      label: "Kelola Misi",
-      href: "/admin/quests",
-      badge: "Aksi",
-    },
-    { icon: Users, label: "Data Member", href: "/admin/members", badge: null },
-    { icon: LineChart, label: "Club Stats", href: "#", badge: null },
+    { icon: ShieldAlert, label: "Admin", href: "/admin", badge: null },
+    { icon: Target, label: "Misi", href: "/admin/quests", badge: "Aksi" },
+    { icon: Users, label: "Member", href: "/admin/members", badge: null },
+    { icon: LineChart, label: "Stats", href: "#", badge: null },
   ];
 
   const memberLinks = [
-    { icon: Swords, label: "Arena Latihan", href: "/portal", badge: "EXP" },
-    { icon: Trophy, label: "Leaderboard", href: "#", badge: null },
-    { icon: Calendar, label: "Jadwal Tanding", href: "#", badge: null },
-    { icon: Settings, label: "Pengaturan", href: "#", badge: null },
+    { icon: Swords, label: "Arena", href: "/portal", badge: "EXP" },
+    {
+      icon: Trophy,
+      label: "Peringkat",
+      href: "/portal/leaderboard",
+      badge: null,
+    },
+    { icon: Calendar, label: "Jadwal", href: "#", badge: null },
+    { icon: Settings, label: "Setelan", href: "#", badge: null },
   ];
 
   const currentLinks = isAdmin ? adminLinks : memberLinks;
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/login");
+  };
+
   return (
     <>
-      {/* --- TOMBOL HAMBURGER (Hanya muncul di HP/layar kecil) --- */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        className="md:hidden fixed top-5 left-5 z-[60] p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white shadow-lg"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* ========================================== */}
+      {/* 📱 TAMPILAN MOBILE (HP)                    */}
+      {/* ========================================== */}
 
-      {/* --- BACKGROUND GELAP SAAT MENU BUKA DI HP --- */}
-      {isMobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[70]"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
+      {/* 1. Top Bar Mobile (Logo & Logout) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 z-50 flex items-center justify-between px-6 shadow-sm">
+        <h1 className="text-white text-lg font-bold tracking-widest flex items-center gap-1">
+          PING<span className="text-orange-500 font-black">PONG</span>
+        </h1>
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">
+            {userInitial}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="text-slate-500 hover:text-rose-500 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
 
-      {/* --- SIDEBAR UTAMA --- */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-[80] w-72 md:w-64 bg-slate-950 flex flex-col h-screen border-r border-slate-800 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
+      {/* 2. Bottom Nav Bar Mobile (Menu Navigasi) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[75px] bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 z-50 flex items-center justify-around px-2 pb-2 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        {currentLinks.map((link) => {
+          const Icon = link.icon;
+          const isActive = pathname === link.href && link.href !== "#";
+
+          return (
+            <Link
+              key={link.label}
+              href={link.href}
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 relative transition-all duration-300 ${
+                isActive
+                  ? "text-orange-500"
+                  : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              {/* Indikator Garis Aktif ala iOS */}
+              {isActive && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-orange-500 rounded-b-full shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
+              )}
+
+              <Icon
+                className={`w-6 h-6 mt-1 transition-transform duration-300 ${isActive ? "scale-110 drop-shadow-md" : "scale-100"}`}
+              />
+              <span
+                className={`text-[10px] font-bold tracking-wide ${isActive ? "text-orange-500" : "text-slate-500"}`}
+              >
+                {link.label}
+              </span>
+
+              {/* Badge Titik Merah Notifikasi untuk HP */}
+              {link.badge && !isActive && (
+                <div className="absolute top-2.5 right-1/4 w-2 h-2 bg-rose-500 rounded-full animate-pulse ring-2 ring-slate-950" />
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* ========================================== */}
+      {/* 💻 TAMPILAN DESKTOP (PC/LAPTOP)            */}
+      {/* ========================================== */}
+      <aside className="hidden md:flex flex-col w-64 bg-slate-950 h-screen border-r border-slate-800 sticky top-0">
         <div className="p-8 flex items-center justify-between">
           <h1 className="text-white text-2xl font-bold tracking-widest flex items-center gap-2">
             PING<span className="text-orange-500 font-black">PONG</span>
           </h1>
-          {/* Tombol X (Tutup) hanya muncul di HP */}
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="md:hidden text-slate-500 hover:text-white"
-          >
-            <X className="w-6 h-6" />
-          </button>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-2 overflow-y-auto">
@@ -154,7 +185,6 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* PROFIL BAWAH */}
         <div className="p-6 mt-auto border-t border-slate-800 bg-slate-950/50">
           <div className="flex items-center gap-3 px-2 py-2 mb-4">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold shadow-inner text-lg">
@@ -169,10 +199,7 @@ export default function Sidebar() {
           </div>
 
           <button
-            onClick={async () => {
-              await signOut(auth);
-              router.push("/login");
-            }}
+            onClick={handleLogout}
             className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors font-bold text-sm border border-transparent hover:border-rose-500/20"
           >
             <LogOut className="w-5 h-5" /> Keluar Akun

@@ -7,6 +7,7 @@ import {
   doc,
   addDoc,
   deleteDoc,
+  updateDoc, // <-- Tambahan untuk update data
   serverTimestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -22,6 +23,9 @@ import {
   Activity,
   Zap,
   Users,
+  Clock,
+  AlertCircle,
+  Unlock, // <-- Tambahan icon untuk Buka Kembali
 } from "lucide-react";
 
 export default function AdminQuestsPage() {
@@ -29,14 +33,20 @@ export default function AdminQuestsPage() {
   const [teams, setTeams] = useState<any[]>([]);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  // Modal State
+  // Modal State Buat Misi
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newQuest, setNewQuest] = useState({
     title: "",
     difficulty: "Beginner",
     exp: 30,
     targetTeam: "Semua Tim",
+    deadline: "",
   });
+
+  // Modal State Buka Waktu (Edit Deadline)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingQuest, setEditingQuest] = useState<any>(null);
+  const [newDeadline, setNewDeadline] = useState("");
 
   const router = useRouter();
   const ADMIN_EMAIL = "rahmalindungilaowo380@gmail.com";
@@ -50,7 +60,7 @@ export default function AdminQuestsPage() {
       }
       const amanEmail = user.email || "";
       if (amanEmail !== ADMIN_EMAIL) {
-        router.push("/portal"); // Tendang member biasa
+        router.push("/portal");
       } else {
         setIsAuthChecking(false);
       }
@@ -62,13 +72,11 @@ export default function AdminQuestsPage() {
   useEffect(() => {
     if (!db || isAuthChecking) return;
 
-    // A. Tarik Semua Misi
     const unsubQuests = onSnapshot(collection(db, "quests"), (snapshot) => {
       const questsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      // Urutkan dari yang paling baru dibuat
       setQuests(
         questsData.sort(
           (a: any, b: any) =>
@@ -77,7 +85,6 @@ export default function AdminQuestsPage() {
       );
     });
 
-    // B. Tarik Daftar Tim (Untuk dropdown pilihan target tim)
     const unsubTeams = onSnapshot(collection(db, "teams"), (snapshot) => {
       setTeams(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
@@ -88,7 +95,7 @@ export default function AdminQuestsPage() {
     };
   }, [isAuthChecking]);
 
-  // --- 3. FUNGSI ADMIN: TAMBAH & HAPUS MISI ---
+  // --- 3. FUNGSI ADMIN ---
   const handleAddQuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuest.title) return;
@@ -97,7 +104,8 @@ export default function AdminQuestsPage() {
       await addDoc(collection(db, "quests"), {
         ...newQuest,
         exp: Number(newQuest.exp),
-        completedBy: [], // Array kosong untuk menampung nama member yang sudah klaim
+        deadline: newQuest.deadline || null,
+        completedBy: [],
         createdAt: serverTimestamp(),
       });
       setIsModalOpen(false);
@@ -106,6 +114,7 @@ export default function AdminQuestsPage() {
         difficulty: "Beginner",
         exp: 30,
         targetTeam: "Semua Tim",
+        deadline: "",
       });
       alert("Latihan baru berhasil di-deploy ke arena! 🏓");
     } catch (error) {
@@ -125,7 +134,25 @@ export default function AdminQuestsPage() {
     }
   };
 
-  // Helper untuk warna level kesulitan
+  // Fungsi Baru: Update Batas Waktu
+  const handleUpdateDeadline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingQuest) return;
+
+    try {
+      await updateDoc(doc(db, "quests", editingQuest.id), {
+        deadline: newDeadline || null, // Jika dikosongkan, batas waktu dihapus (berlaku selamanya)
+      });
+      setIsEditModalOpen(false);
+      setEditingQuest(null);
+      setNewDeadline("");
+      alert("Batas waktu berhasil diperbarui! Misi terbuka kembali. 🔓");
+    } catch (error) {
+      console.error(error);
+      alert("Gagal memperbarui batas waktu.");
+    }
+  };
+
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
       case "Beginner":
@@ -139,6 +166,17 @@ export default function AdminQuestsPage() {
     }
   };
 
+  const formatDeadline = (isoString: string) => {
+    if (!isoString) return null;
+    const date = new Date(isoString);
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   if (isAuthChecking) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 bg-slate-950">
@@ -150,16 +188,17 @@ export default function AdminQuestsPage() {
     );
   }
 
+  const now = new Date();
+
   return (
     <div className="p-8 lg:p-10 max-w-7xl mx-auto space-y-8 h-screen overflow-y-auto pb-24 scrollbar-hide">
-      {/* HEADER & TOMBOL AKSI */}
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             Kelola Latihan <ShieldAlert className="w-6 h-6 text-rose-500" />
           </h2>
           <p className="text-slate-400 mt-2">
-            Buat, pantau, dan atur jadwal latihan untuk anggota club.
+            Buat, pantau, dan atur batas waktu latihan untuk anggota club.
           </p>
         </div>
         <button
@@ -170,7 +209,6 @@ export default function AdminQuestsPage() {
         </button>
       </section>
 
-      {/* STATISTIK CEPAT */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-slate-800/40 border border-slate-700/50 p-6 rounded-3xl flex items-center gap-5">
           <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center">
@@ -178,7 +216,7 @@ export default function AdminQuestsPage() {
           </div>
           <div>
             <p className="text-slate-400 text-sm font-bold">
-              Total Latihan Aktif
+              Total Latihan Dibuat
             </p>
             <p className="text-3xl font-black text-white">{quests.length}</p>
           </div>
@@ -207,7 +245,6 @@ export default function AdminQuestsPage() {
         </div>
       </div>
 
-      {/* DAFTAR MISI (GRID) */}
       <div className="space-y-4">
         {quests.length === 0 ? (
           <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl p-10 text-center">
@@ -219,54 +256,95 @@ export default function AdminQuestsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {quests.map((quest) => (
-              <div
-                key={quest.id}
-                className="bg-slate-800/60 border border-slate-700 p-6 rounded-3xl hover:border-orange-500/40 transition-colors flex flex-col h-full group"
-              >
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-4">
-                    <span
-                      className={`inline-block text-[10px] font-black px-2.5 py-1 rounded-md border uppercase ${getDifficultyColor(quest.difficulty)}`}
+            {quests.map((quest) => {
+              const isExpired =
+                quest.deadline && new Date(quest.deadline) < now;
+              const deadlineText = formatDeadline(quest.deadline);
+
+              return (
+                <div
+                  key={quest.id}
+                  className={`border p-6 rounded-3xl transition-colors flex flex-col h-full group ${
+                    isExpired
+                      ? "bg-slate-900/80 border-rose-900/30 opacity-80"
+                      : "bg-slate-800/60 border-slate-700 hover:border-orange-500/40"
+                  }`}
+                >
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className={`inline-block text-[10px] font-black px-2.5 py-1 rounded-md border uppercase ${getDifficultyColor(quest.difficulty)}`}
+                        >
+                          {quest.difficulty}
+                        </span>
+                        {isExpired && (
+                          <span className="inline-block text-[10px] font-black px-2.5 py-1 rounded-md border uppercase text-white bg-rose-600 border-rose-500 flex items-center gap-1 shadow-lg shadow-rose-600/20">
+                            <AlertCircle className="w-3 h-3" /> Kedaluwarsa
+                          </span>
+                        )}
+                      </div>
+
+                      {/* ACTION BUTTONS (Edit & Delete) */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingQuest(quest);
+                            setNewDeadline(quest.deadline || "");
+                            setIsEditModalOpen(true);
+                          }}
+                          className="text-slate-500 hover:text-emerald-400 transition-colors p-1"
+                          title="Buka Kembali / Ubah Batas Waktu"
+                        >
+                          <Unlock className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuest(quest.id)}
+                          className="text-slate-500 hover:text-rose-500 transition-colors p-1"
+                          title="Hapus Latihan"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <h3
+                      className={`text-xl font-bold mb-2 leading-snug ${isExpired ? "text-slate-500 line-through" : "text-white"}`}
                     >
-                      {quest.difficulty}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteQuest(quest.id)}
-                      className="text-slate-500 hover:text-rose-500 transition-colors p-1"
-                      title="Hapus Latihan"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      {quest.title}
+                    </h3>
+
+                    {deadlineText && !isExpired && (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2 font-medium">
+                        <Clock className="w-3.5 h-3.5 text-rose-400" />
+                        Batas: {deadlineText}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-sm text-slate-400 mt-4 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                      <Users className="w-4 h-4 text-indigo-400" />
+                      <span className="font-medium truncate">
+                        {quest.targetTeam}
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2 leading-snug">
-                    {quest.title}
-                  </h3>
-
-                  <div className="flex items-center gap-2 text-sm text-slate-400 mt-4 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                    <Users className="w-4 h-4 text-indigo-400" />
-                    <span className="font-medium truncate">
-                      {quest.targetTeam}
+                  <div className="mt-6 pt-5 border-t border-slate-700/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 font-medium">
+                        Selesai:
+                      </span>
+                      <span className="text-sm font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        {quest.completedBy?.length || 0} orang
+                      </span>
+                    </div>
+                    <span className="text-sm font-black text-orange-400 flex items-center gap-1">
+                      <Zap className="w-4 h-4 fill-orange-400" /> {quest.exp}
                     </span>
                   </div>
                 </div>
-
-                <div className="mt-6 pt-5 border-t border-slate-700/50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 font-medium">
-                      Diselesaikan oleh:
-                    </span>
-                    <span className="text-sm font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                      {quest.completedBy?.length || 0} orang
-                    </span>
-                  </div>
-                  <span className="text-sm font-black text-orange-400 flex items-center gap-1">
-                    <Zap className="w-4 h-4" /> {quest.exp}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -281,12 +359,10 @@ export default function AdminQuestsPage() {
             >
               <X className="w-6 h-6" />
             </button>
-
-            <h3 className="text-2xl font-black text-white mb-8 flex items-center gap-3">
+            <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
               <Target className="w-6 h-6 text-orange-500" /> Buat Latihan Baru
             </h3>
-
-            <form onSubmit={handleAddQuest} className="space-y-5">
+            <form onSubmit={handleAddQuest} className="space-y-4">
               <div>
                 <label className="text-slate-500 text-xs font-bold uppercase ml-1">
                   Judul Latihan
@@ -297,12 +373,11 @@ export default function AdminQuestsPage() {
                   onChange={(e) =>
                     setNewQuest({ ...newQuest, title: e.target.value })
                   }
-                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-orange-500 transition-all mt-2"
+                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-orange-500 transition-all mt-1"
                   placeholder="Contoh: 100x Forehand Drive"
                   required
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-slate-500 text-xs font-bold uppercase ml-1">
@@ -313,7 +388,7 @@ export default function AdminQuestsPage() {
                     onChange={(e) =>
                       setNewQuest({ ...newQuest, difficulty: e.target.value })
                     }
-                    className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-orange-500 mt-2"
+                    className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-orange-500 mt-1"
                   >
                     <option value="Beginner">Beginner</option>
                     <option value="Intermediate">Intermediate</option>
@@ -330,12 +405,11 @@ export default function AdminQuestsPage() {
                     onChange={(e) =>
                       setNewQuest({ ...newQuest, exp: Number(e.target.value) })
                     }
-                    className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-orange-500 mt-2"
+                    className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-orange-500 mt-1"
                     required
                   />
                 </div>
               </div>
-
               <div>
                 <label className="text-slate-500 text-xs font-bold uppercase ml-1">
                   Target Tim
@@ -345,7 +419,7 @@ export default function AdminQuestsPage() {
                   onChange={(e) =>
                     setNewQuest({ ...newQuest, targetTeam: e.target.value })
                   }
-                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-orange-500 mt-2"
+                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-orange-500 mt-1"
                 >
                   <option value="Semua Tim">📢 Semua Tim</option>
                   {teams.map((t) => (
@@ -355,12 +429,77 @@ export default function AdminQuestsPage() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="text-slate-500 text-xs font-bold uppercase ml-1">
+                  Batas Waktu (Opsional)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newQuest.deadline}
+                  onChange={(e) =>
+                    setNewQuest({ ...newQuest, deadline: e.target.value })
+                  }
+                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-orange-500 mt-1 [color-scheme:dark]"
+                />
+                <p className="text-[10px] text-slate-500 mt-1 ml-1">
+                  Kosongkan jika latihan berlaku selamanya.
+                </p>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-orange-600 hover:bg-orange-500 py-4 mt-6 rounded-2xl font-black text-white transition-all shadow-xl shadow-orange-600/20"
+              >
+                🚀 Upload ke Arena
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL EDIT BATAS WAKTU (BARU) --- */}
+      {isEditModalOpen && editingQuest && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 md:p-10 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setEditingQuest(null);
+              }}
+              className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h3 className="text-2xl font-black text-white mb-2 flex items-center gap-3">
+              <Unlock className="w-6 h-6 text-emerald-500" /> Buka Waktu
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Perbarui tenggat waktu untuk misi{" "}
+              <strong className="text-white">"{editingQuest.title}"</strong>.
+            </p>
+
+            <form onSubmit={handleUpdateDeadline} className="space-y-4">
+              <div>
+                <label className="text-slate-500 text-xs font-bold uppercase ml-1">
+                  Batas Waktu Baru
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newDeadline}
+                  onChange={(e) => setNewDeadline(e.target.value)}
+                  className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-emerald-500 mt-1 [color-scheme:dark]"
+                />
+                <p className="text-[10px] text-slate-500 mt-2 ml-1">
+                  *Kosongkan kolom ini jika kamu ingin misi ini terbuka{" "}
+                  <strong>selamanya</strong> tanpa kedaluwarsa.
+                </p>
+              </div>
 
               <button
                 type="submit"
-                className="w-full bg-orange-600 hover:bg-orange-500 py-4 mt-8 rounded-2xl font-black text-white transition-all shadow-xl shadow-orange-600/20"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 mt-6 rounded-2xl font-black text-white transition-all shadow-xl shadow-emerald-600/20"
               >
-                🚀 Upload ke Arena
+                Simpan & Buka 🔓
               </button>
             </form>
           </div>

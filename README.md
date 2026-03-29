@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏓 Pingpong Club JIU - Digital Training Arena
 
-## Getting Started
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Hosting%20%26%20Firestore-orange?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-blue?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 
-First, run the development server:
+🌎 Choose your language:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- [🇬🇧 English Version](#-english-version)
+- [🇮🇩 Versi Indonesia](#-versi-indonesia)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🇬🇧 English Version
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Pingpong Club JIU** is a digital training management platform specifically designed to boost the productivity and competitive spirit of table tennis club members. This system utilizes **Gamification** (EXP & Missions) to monitor player progression in real-time.
 
-## Learn More
+### ✨ Key Features
 
-To learn more about Next.js, take a look at the following resources:
+- **🛡️ Admin Dashboard (Commander Center):** Create quests, manage smart deadlines, use the master key to reopen expired training, and monitor team EXP.
+- **🚀 Member Portal (Training Arena):** View available training schedules, claim EXP in real-time, get visual feedback for expired/completed quests, and check the interactive leaderboard.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 🛠️ Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Framework:** Next.js 15 (App Router)
+- **Database:** Firebase Firestore (Real-time NoSQL)
+- **Authentication:** Firebase Auth
+- **Styling:** Tailwind CSS (Dark Mode optimized)
+- **Deployment:** Firebase Hosting (Static Export)
 
-## Deploy on Vercel
+**Live Demo:** [jiupingpong.web.app](https://jiupingpong.web.app)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🇮🇩 Versi Indonesia
+
+**Pingpong Club JIU** adalah platform manajemen latihan digital yang dirancang khusus untuk meningkatkan produktivitas dan semangat anggota klub tenis meja. Sistem ini menggunakan mekanisme **Gamifikasi** (EXP & Mission) untuk memantau perkembangan pemain secara real-time.
+
+### ✨ Fitur Utama
+
+- **🛡️ Dashboard Admin (Commander Center):** Membuat misi, mengatur batas waktu otomatis, membuka kembali misi yang kedaluwarsa, dan memantau EXP tim.
+- **🚀 Portal Member (Training Arena):** Melihat jadwal latihan, mengklaim EXP secara instan, melihat status misi dengan efek visual, dan memantau papan peringkat.
+
+### 🛠️ Teknologi yang Digunakan
+
+- **Framework:** Next.js 15 (App Router)
+- **Database:** Firebase Firestore (Real-time NoSQL)
+- **Autentikasi:** Firebase Auth
+- **Desain UI:** Tailwind CSS (Tema Dark Mode)
+- **Hosting:** Firebase Hosting (Static Export)
+
+**Live Demo:** [jiupingpong.web.app](https://jiupingpong.web.app)
+
+---
